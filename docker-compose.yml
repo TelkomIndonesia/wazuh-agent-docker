@@ -1,7 +1,23 @@
 services:
+  wazuh-user:
+    image: busybox
+    restart: on-failure
+    volumes:
+      - /:/host:ro
+    entrypoint:
+      - chroot
+      - /host
+      - sh
+      - -c
+      - id wazuh || useradd wazuh
+
   wazuh-agent:
     image: wazuh-agent
     build: .
+    depends_on:
+      wazuh-user:
+        condition: service_started
+    restart: unless-stopped
     privileged: true
     pid: host
     ipc: host
@@ -11,7 +27,7 @@ services:
       WAZUH_MANAGER_ADDRESS:
       WAZUH_RULESET_SCA: cis_ubuntu18-04
     volumes:
-      - /:/host
+      - /:/host:ro
       - /var/ossec:/host/var/ossec
 
       - ./entrypoint.sh:/entrypoint.sh
@@ -19,8 +35,5 @@ services:
       - ./wazuh-control.sh:/var/ossec/bin/wazuh-control.sh
       - ./wazuh-tail-logs.sh:/var/ossec/bin/wazuh-tail-logs.sh
       - ./supervisord.conf:/var/ossec/etc/supervisord.conf
-      
-      - ./authd.pass:/var/ossec/etc/authd.pass
 
-volumes:
-  wazuh:
+      - ./authd.pass:/var/ossec/etc/authd.pass
