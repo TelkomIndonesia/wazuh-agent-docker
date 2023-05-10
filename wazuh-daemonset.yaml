@@ -41,6 +41,8 @@ spec:
           livenessProbe:
             exec:
               command:
+                - chroot
+                - /host
                 - /var/ossec/bin/wazuh-control
                 - status
             initialDelaySeconds: 30
