@@ -19,6 +19,9 @@ for filename in $WAZUH_RULESET_SCA; do
 done
 ###
 
+if [ -f "/var/run/wazuh/authd.pass" ]; then 
+    cp /var/run/wazuh/authd.pass /var/ossec/etc/authd.pass
+fi
 gomplate -f /var/ossec/etc/ossec.tpl.conf -o /var/ossec/etc/ossec.conf
 rsync -av --delete --exclude etc/client.keys /var/ossec/ /host/var/ossec
 exec chroot /host /var/ossec/bin/entrypoint-chroot.sh
