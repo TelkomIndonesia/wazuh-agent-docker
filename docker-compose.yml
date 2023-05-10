@@ -1,0 +1,26 @@
+services:
+  wazuh-agent:
+    image: wazuh-agent
+    build: .
+    privileged: true
+    pid: host
+    ipc: host
+    network_mode: host
+    userns_mode: host
+    environment:
+      WAZUH_MANAGER_ADDRESS:
+      WAZUH_RULESET_SCA: cis_ubuntu18-04
+    volumes:
+      - /:/host
+      - /var/ossec:/host/var/ossec
+
+      - ./entrypoint.sh:/entrypoint.sh
+      - ./entrypoint-chroot.sh:/var/ossec/bin/entrypoint-chroot.sh
+      - ./wazuh-control.sh:/var/ossec/bin/wazuh-control.sh
+      - ./wazuh-tail-logs.sh:/var/ossec/bin/wazuh-tail-logs.sh
+      - ./supervisord.conf:/var/ossec/etc/supervisord.conf
+      
+      - ./authd.pass:/var/ossec/etc/authd.pass
+
+volumes:
+  wazuh:
