@@ -3,7 +3,6 @@ ARG VERSION="4.4.1"
 
 FROM wazuh/wazuh-manager:${VERSION} AS wazuh-manager
 FROM hairyhenderson/gomplate:v3.11.5-slim AS gomplate
-FROM mikefarah/yq:4.33.3 AS yq
 
 
 
@@ -26,18 +25,18 @@ FROM bitnami/minideb:bullseye
 ARG VERSION
 ARG VERSION_REVISION="1"
 RUN install_packages \
-        curl \
-        apt-transport-https \
-        gnupg2 \
-        rsync \
-        inotify-tools \
-        ca-certificates \
-        net-tools \
-        procps \
-    # install wazuh
-    && curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | apt-key add - \
-    && echo "deb https://packages.wazuh.com/4.x/apt/ stable main" | tee /etc/apt/sources.list.d/wazuh.list \
-    && install_packages wazuh-agent=${VERSION}-${VERSION_REVISION}
+  curl \
+  apt-transport-https \
+  gnupg2 \
+  rsync \
+  inotify-tools \
+  ca-certificates \
+  net-tools \
+  procps \
+  # install wazuh
+  && curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | apt-key add - \
+  && echo "deb https://packages.wazuh.com/4.x/apt/ stable main" | tee /etc/apt/sources.list.d/wazuh.list \
+  && install_packages wazuh-agent=${VERSION}-${VERSION_REVISION}
 
 COPY --from=wazuh-manager /var/ossec/ruleset/sca/ /var/ossec/ruleset/sca/
 COPY --from=gomplate /gomplate /usr/bin/gomplate
