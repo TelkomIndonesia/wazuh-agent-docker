@@ -1,7 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-
 ### enable sca ruleset
 export WAZUH_RULESET_SCA="${WAZUH_RULESET_SCA:-""}"
 rm -rf /var/ossec/ruleset/sca
@@ -19,9 +18,12 @@ for filename in $WAZUH_RULESET_SCA; do
 done
 ###
 
-if [ -f "/var/run/wazuh/authd.pass" ]; then 
-    cp /var/run/wazuh/authd.pass /var/ossec/etc/authd.pass
+desiredname=${WAZUH_AGENT_NAME:-""}
+currentname=$(cat /host/var/ossec/etc/client.keys | awk '{print $2}')
+if [ "$desiredname" != "$currentname" ]; then 
+    echo -n "" > /host/var/ossec/etc/client.keys
 fi
 gomplate -f /var/ossec/etc/ossec.tpl.conf -o /var/ossec/etc/ossec.conf
 rsync -av --delete --exclude etc/client.keys /var/ossec/ /host/var/ossec
+
 exec chroot /host /var/ossec/bin/entrypoint-chroot.sh

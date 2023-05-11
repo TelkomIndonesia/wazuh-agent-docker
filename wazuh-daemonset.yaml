@@ -71,8 +71,9 @@ spec:
               readOnly: true
             - mountPath: /host/var/ossec
               name: varossec
-            - mountPath: /var/run/wazuh
+            - mountPath: /var/ossec/etc/authd.pass
               name: wazuh-authd-pass
+              subPath: authd.pass
       volumes:
         - name: hostroot
           hostPath:
