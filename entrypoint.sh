@@ -19,7 +19,7 @@ done
 ###
 
 desiredname="${WAZUH_AGENT_NAME_PREFIX:-""}${WAZUH_AGENT_NAME:-""}${WAZUH_AGENT_NAME_POSTFIX:-""}"
-currentname=$(cat /host/var/ossec/etc/client.keys | awk '{print $2}')
+currentname=$(cat /host/var/ossec/etc/client.keys || echo | awk '{print $2}')
 if [ "$desiredname" != "$currentname" ]; then 
     echo -n "" > /host/var/ossec/etc/client.keys
 fi
