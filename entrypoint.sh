@@ -18,12 +18,16 @@ for filename in $WAZUH_RULESET_SCA; do
 done
 ###
 
+# prepare config and copy to host
+gomplate -f /var/ossec/etc/ossec.tpl.conf -o /var/ossec/etc/ossec.conf
+rsync -av --delete --exclude etc/client.keys /var/ossec/ /host/var/ossec
+
+# rename agent if changed
 desiredname="${WAZUH_AGENT_NAME_PREFIX:-""}${WAZUH_AGENT_NAME:-""}${WAZUH_AGENT_NAME_POSTFIX:-""}"
 currentname=$(cat /host/var/ossec/etc/client.keys || echo | awk '{print $2}')
 if [ "$desiredname" != "$currentname" ]; then 
     echo -n "" > /host/var/ossec/etc/client.keys
 fi
-gomplate -f /var/ossec/etc/ossec.tpl.conf -o /var/ossec/etc/ossec.conf
-rsync -av --delete --exclude etc/client.keys /var/ossec/ /host/var/ossec
 
+# exec
 exec chroot /host /var/ossec/bin/entrypoint-chroot.sh
