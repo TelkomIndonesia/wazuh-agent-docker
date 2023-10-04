@@ -13,7 +13,7 @@ services:
 
   wazuh-agent:
     image: wazuh-agent
-    build: .
+    build: ..
     depends_on:
       wazuh-user:
         condition: service_started
@@ -29,11 +29,4 @@ services:
     volumes:
       - /:/host:ro
       - /var/ossec:/host/var/ossec
-
-      - ./entrypoint.sh:/entrypoint.sh
-      - ./entrypoint-chroot.sh:/var/ossec/bin/entrypoint-chroot.sh
-      - ./wazuh-control.sh:/var/ossec/bin/wazuh-control.sh
-      - ./wazuh-tail-logs.sh:/var/ossec/bin/wazuh-tail-logs.sh
-      - ./supervisord.conf:/var/ossec/etc/supervisord.conf
-
       - ./authd.pass:/var/ossec/etc/authd.pass

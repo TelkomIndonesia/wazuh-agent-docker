@@ -19,15 +19,16 @@ done
 ###
 
 # prepare config and copy to host
+WAZUH_AGENT_HOST_DIR=${WAZUH_AGENT_HOST_DIR:-"/host"}
 gomplate -f /var/ossec/etc/ossec.tpl.conf -o /var/ossec/etc/ossec.conf
-rsync -av --delete --exclude etc/client.keys /var/ossec/ /host/var/ossec
+rsync -av --delete --exclude etc/client.keys /var/ossec/ "$WAZUH_AGENT_HOST_DIR/var/ossec"
 
 # rename agent if changed
 desiredname="${WAZUH_AGENT_NAME_PREFIX:-""}${WAZUH_AGENT_NAME:-""}${WAZUH_AGENT_NAME_POSTFIX:-""}"
-currentname=$(cat /host/var/ossec/etc/client.keys || echo | awk '{print $2}')
+currentname=$(cat "$WAZUH_AGENT_HOST_DIR/var/ossec/etc/client.keys" || echo | awk '{print $2}')
 if [ "$desiredname" != "$currentname" ]; then 
-    echo -n "" > /host/var/ossec/etc/client.keys
+    echo -n "" > "$WAZUH_AGENT_HOST_DIR/var/ossec/etc/client.keys"
 fi
 
 # exec
-exec chroot /host /var/ossec/bin/entrypoint-chroot.sh
+exec chroot $WAZUH_AGENT_HOST_DIR /var/ossec/bin/entrypoint-chroot.sh
