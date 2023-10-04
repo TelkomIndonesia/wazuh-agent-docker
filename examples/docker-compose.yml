@@ -24,7 +24,6 @@ services:
     network_mode: host
     userns_mode: host
     environment:
-      WAZUH_MANAGER_ADDRESS:
       WAZUH_RULESET_SCA: cis_ubuntu18-04
     volumes:
       - /:/host:ro

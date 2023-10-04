@@ -21,7 +21,7 @@ done
 # prepare config and copy to host
 WAZUH_AGENT_HOST_DIR=${WAZUH_AGENT_HOST_DIR:-"/host"}
 gomplate -f /var/ossec/etc/ossec.tpl.conf -o /var/ossec/etc/ossec.conf
-rsync -av --delete --exclude etc/client.keys /var/ossec/ "$WAZUH_AGENT_HOST_DIR/var/ossec"
+rsync -avq --delete --exclude etc/client.keys /var/ossec/ "$WAZUH_AGENT_HOST_DIR/var/ossec"
 
 # rename agent if changed
 desiredname="${WAZUH_AGENT_NAME_PREFIX:-""}${WAZUH_AGENT_NAME:-""}${WAZUH_AGENT_NAME_POSTFIX:-""}"
@@ -30,5 +30,7 @@ if [ "$desiredname" != "$currentname" ]; then
     echo -n "" > "$WAZUH_AGENT_HOST_DIR/var/ossec/etc/client.keys"
 fi
 
-# exec
-exec chroot $WAZUH_AGENT_HOST_DIR /var/ossec/bin/entrypoint-chroot.sh
+exec multirun \
+    "socat UNIX-LISTEN:$WAZUH_AGENT_HOST_DIR/var/ossec/container-exec.sock,fork EXEC:"/bin/bash",pipes,stderr 2>/dev/null" \
+    "chroot $WAZUH_AGENT_HOST_DIR /var/ossec/bin/wazuh-start.sh" \
+    "chroot $WAZUH_AGENT_HOST_DIR /var/ossec/bin/wazuh-tail-logs.sh"

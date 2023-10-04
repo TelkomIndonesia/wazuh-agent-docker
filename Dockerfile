@@ -21,6 +21,18 @@ RUN cd fsnotify/cmd/fsnotify \
 
 
 
+FROM debian:bullseye AS yara
+RUN apt-get update && apt-get install -y wget automake libtool make gcc pkg-config libjansson-dev libmagic-dev libssl-dev
+RUN cd /root && wget https://github.com/VirusTotal/yara/archive/refs/tags/v4.3.2.tar.gz \
+  && tar -zxf v4.3.2.tar.gz \
+  && cd yara-4.3.2 \
+  && ./bootstrap.sh \
+  && ./configure --prefix=/usr/local/yara --disable-dotnet --with-crypto --enable-magic --enable-cuckoo --disable-shared --enable-static\
+  && make \
+  && make install
+
+
+
 FROM bitnami/minideb:bullseye
 
 ARG VERSION
@@ -31,30 +43,34 @@ RUN install_packages \
   gnupg2 \
   rsync \
   ca-certificates \
+  socat \
+  libjansson4 \
+  libmagic1 \
+  libssl1.1 \
   # install wazuh
   && curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | apt-key add - \
   && echo "deb https://packages.wazuh.com/4.x/apt/ stable main" | tee /etc/apt/sources.list.d/wazuh.list \
   && install_packages wazuh-agent=${VERSION}-${VERSION_REVISION}
 
 COPY --from=gomplate /gomplate /usr/bin/gomplate
-COPY --from=multirun /src/multirun /var/ossec/bin/multirun
+COPY --from=multirun /src/multirun /usr/bin/multirun
+COPY --from=yara /usr/local/yara /usr/local/yara
 COPY --from=fsnotify /src/fsnotify/cmd/fsnotify/fsnotify /var/ossec/bin/fsnotify
 COPY --from=wazuh-manager /var/ossec/ruleset/sca/ /var/ossec/ruleset/sca/
 RUN find /var/ossec/ruleset/sca/ -name "*.yml" -exec mv {} {}.disabled \; \
   && mv /var/ossec/ruleset/sca /var/ossec/ruleset/sca.bak
 
 COPY entrypoint.sh /entrypoint.sh 
-COPY entrypoint-chroot.sh /var/ossec/bin/entrypoint-chroot.sh
-COPY wazuh-control.sh /var/ossec/bin/wazuh-control.sh
+COPY wazuh-control.sh /var/ossec/bin/wazuh-start.sh
 COPY wazuh-tail-logs.sh /var/ossec/bin/wazuh-tail-logs.sh
 COPY ossec.tpl.conf /var/ossec/etc/ossec.tpl.conf
 
-ENV WAZUH_MANAGER_ADDRESS=127.0.0.1
-ENV WAZUH_MANAGER_PORT=1514
-ENV WAZUH_MANAGER_ENROLLMENT_PORT=1515
-ENV WAZUH_AGENT_NAME=agent
+ENV WAZUH_MANAGER_ADDRESS="127.0.0.1"
+ENV WAZUH_MANAGER_PORT="1514"
+ENV WAZUH_MANAGER_ENROLLMENT_PORT="1515"
+ENV WAZUH_AGENT_NAME="agent"
 ENV WAZUH_AGENT_NAME_PREFIX=""
 ENV WAZUH_AGENT_NAME_POSTFIX=""
-ENV WAZUH_AGENT_HOST_DIR=/host
+ENV WAZUH_AGENT_HOST_DIR="/host"
 
 ENTRYPOINT ["/entrypoint.sh"]
