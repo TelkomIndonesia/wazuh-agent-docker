@@ -4,7 +4,7 @@ set -euo pipefail
 ### enable sca ruleset
 export WAZUH_RULESET_SCA="${WAZUH_RULESET_SCA:-""}"
 rm -rf /var/ossec/ruleset/sca
-cp -r /var/ossec/ruleset/sca.bak /var/ossec/ruleset/sca
+cp -r /var/ossec/ruleset/sca.disabled /var/ossec/ruleset/sca
 if [ -z "$WAZUH_RULESET_SCA" ]; then 
     WAZUH_RULESET_SCA="$(find /var/ossec/ruleset/sca/ -type f -exec basename {} \; | sed  's|.yml\(.disabled\)\?||')"
 else
@@ -31,6 +31,6 @@ if [ "$desiredname" != "$currentname" ]; then
 fi
 
 exec multirun \
-    "socat UNIX-LISTEN:$WAZUH_AGENT_HOST_DIR/var/ossec/container-exec.sock,fork EXEC:"/bin/bash",pipes,stderr 2>/dev/null" \
+    "/var/ossec/bin/socat UNIX-LISTEN:$WAZUH_AGENT_HOST_DIR/var/ossec/container-exec.sock,fork EXEC:"/app/wazuh-exec-container.py",pipes,stderr 2>/dev/null" \
     "chroot $WAZUH_AGENT_HOST_DIR /var/ossec/bin/wazuh-start.sh" \
     "chroot $WAZUH_AGENT_HOST_DIR /var/ossec/bin/wazuh-tail-logs.sh"

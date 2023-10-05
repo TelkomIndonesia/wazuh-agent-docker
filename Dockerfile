@@ -2,8 +2,14 @@ ARG VERSION="4.4.1"
 
 
 
-FROM wazuh/wazuh-manager:${VERSION} AS wazuh-manager
 FROM hairyhenderson/gomplate:v3.11.5-slim AS gomplate
+FROM paullj1/socat_static:1.7.3.3 AS socat
+
+
+
+FROM wazuh/wazuh-manager:${VERSION} AS wazuh-manager
+RUN find /var/ossec/ruleset/sca/ -name "*.yml" -exec mv {} {}.disabled \; \
+  && mv /var/ossec/ruleset/sca /var/ossec/ruleset/sca.disabled
 
 
 
@@ -32,18 +38,16 @@ RUN cd /root && wget https://github.com/VirusTotal/yara/archive/refs/tags/v4.3.2
   && make install
 
 
-
-FROM bitnami/minideb:bullseye
+FROM bitnami/python:3.11.6-debian-11-r0
 
 ARG VERSION
 ARG VERSION_REVISION="1"
-RUN install_packages \
+RUN install_packages \  
   curl \
   apt-transport-https \
   gnupg2 \
   rsync \
   ca-certificates \
-  socat \
   libjansson4 \
   libmagic1 \
   libssl1.1 \
@@ -55,14 +59,16 @@ RUN install_packages \
 COPY --from=gomplate /gomplate /usr/bin/gomplate
 COPY --from=multirun /src/multirun /usr/bin/multirun
 COPY --from=yara /usr/local/yara /usr/local/yara
+
 COPY --from=fsnotify /src/fsnotify/cmd/fsnotify/fsnotify /var/ossec/bin/fsnotify
-COPY --from=wazuh-manager /var/ossec/ruleset/sca/ /var/ossec/ruleset/sca/
-RUN find /var/ossec/ruleset/sca/ -name "*.yml" -exec mv {} {}.disabled \; \
-  && mv /var/ossec/ruleset/sca /var/ossec/ruleset/sca.bak
+COPY --from=socat /socat /var/ossec/bin/socat
+COPY --from=wazuh-manager /var/ossec/ruleset/sca.disabled /var/ossec/ruleset/sca.disabled
 
 COPY entrypoint.sh /entrypoint.sh 
+COPY wazuh-exec-container.py /app/wazuh-exec-container.py
 COPY wazuh-control.sh /var/ossec/bin/wazuh-start.sh
 COPY wazuh-tail-logs.sh /var/ossec/bin/wazuh-tail-logs.sh
+COPY wazuh-exec-container.sh /var/ossec/bin/wazuh-exec-container.sh
 COPY ossec.tpl.conf /var/ossec/etc/ossec.tpl.conf
 
 ENV WAZUH_MANAGER_ADDRESS="127.0.0.1"
