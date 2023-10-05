@@ -68,7 +68,7 @@ COPY entrypoint.sh /entrypoint.sh
 COPY wazuh-exec-container.py /app/wazuh-exec-container.py
 COPY wazuh-control.sh /var/ossec/bin/wazuh-start.sh
 COPY wazuh-tail-logs.sh /var/ossec/bin/wazuh-tail-logs.sh
-COPY wazuh-exec-container.sh /var/ossec/bin/wazuh-exec-container.sh
+COPY wazuh-exec-container.sh /var/ossec/active-response/bin/wazuh-exec-container.sh
 COPY ossec.tpl.conf /var/ossec/etc/ossec.tpl.conf
 
 ENV WAZUH_MANAGER_ADDRESS="127.0.0.1"
