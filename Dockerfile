@@ -56,6 +56,14 @@ RUN curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | apt-key add - \
 
 
 
+FROM golang AS wazuh-exec-container
+WORKDIR /src
+COPY wazuh-exec-container.go .
+RUN --mount=type=cache,target=/go/pkg/mod \
+  --mount=type=cache,target=/root/.cache/go-build \
+  CGO_ENABLED=0 go build wazuh-exec-container.go
+
+
 FROM bitnami/python:3.11.6-debian-11-r0
 
 RUN install_packages \  
@@ -71,7 +79,7 @@ COPY --from=yara /usr/local/yara /usr/local/yara
 COPY --from=wazuh-agent /var/ossec /var/ossec
 COPY --from=wazuh-manager /var/ossec/ruleset/sca.disabled /var/ossec/ruleset/sca.disabled
 COPY --from=fsnotify /src/fsnotify/cmd/fsnotify/fsnotify /var/ossec/bin/fsnotify
-COPY --from=socat /socat /var/ossec/bin/socat
+COPY --from=wazuh-exec-container /src/wazuh-exec-container /var/ossec/active-response/bin/wazuh-exec-container
 
 COPY entrypoint.sh /entrypoint.sh 
 COPY wazuh-exec-container.py /app/wazuh-exec-container.py
@@ -79,7 +87,6 @@ COPY active-response /app/active-response
 
 COPY wazuh-control.sh /var/ossec/bin/wazuh-start.sh
 COPY wazuh-tail-logs.sh /var/ossec/bin/wazuh-tail-logs.sh
-COPY wazuh-exec-container.sh /var/ossec/active-response/bin/wazuh-exec-container.sh
 COPY ossec.tpl.conf /var/ossec/etc/ossec.tpl.conf
 
 ENV WAZUH_MANAGER_ADDRESS="127.0.0.1"
