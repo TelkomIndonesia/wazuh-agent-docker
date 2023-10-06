@@ -27,8 +27,8 @@ RUN cd fsnotify/cmd/fsnotify \
 
 
 
-FROM debian:bullseye AS yara
-RUN apt-get update && apt-get install -y wget automake libtool make gcc pkg-config libjansson-dev libmagic-dev libssl-dev
+FROM bitnami/minideb:bullseye AS yara
+RUN install_packages ca-certificates wget automake libtool make gcc pkg-config libjansson-dev libmagic-dev libssl-dev
 RUN cd /root && wget https://github.com/VirusTotal/yara/archive/refs/tags/v4.3.2.tar.gz \
   && tar -zxf v4.3.2.tar.gz \
   && cd yara-4.3.2 \
@@ -38,31 +38,37 @@ RUN cd /root && wget https://github.com/VirusTotal/yara/archive/refs/tags/v4.3.2
   && make install
 
 
-FROM bitnami/python:3.11.6-debian-11-r0
 
+FROM bitnami/minideb:bullseye AS wazuh-agent
 ARG VERSION
 ARG VERSION_REVISION="1"
 RUN install_packages \  
   curl \
   apt-transport-https \
   gnupg2 \
-  rsync \
-  ca-certificates \
-  libjansson4 \
-  libmagic1 \
-  libssl1.1 \
-  # install wazuh
-  && curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | apt-key add - \
+  ca-certificates
+RUN curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | apt-key add - \
   && echo "deb https://packages.wazuh.com/4.x/apt/ stable main" | tee /etc/apt/sources.list.d/wazuh.list \
   && install_packages wazuh-agent=${VERSION}-${VERSION_REVISION}
+
+
+
+FROM bitnami/python:3.11.6-debian-11-r0
+
+RUN install_packages \  
+  rsync \
+  libjansson4 \
+  libmagic1 \
+  libssl1.1
 
 COPY --from=gomplate /gomplate /usr/bin/gomplate
 COPY --from=multirun /src/multirun /usr/bin/multirun
 COPY --from=yara /usr/local/yara /usr/local/yara
 
+COPY --from=wazuh-agent /var/ossec /var/ossec
+COPY --from=wazuh-manager /var/ossec/ruleset/sca.disabled /var/ossec/ruleset/sca.disabled
 COPY --from=fsnotify /src/fsnotify/cmd/fsnotify/fsnotify /var/ossec/bin/fsnotify
 COPY --from=socat /socat /var/ossec/bin/socat
-COPY --from=wazuh-manager /var/ossec/ruleset/sca.disabled /var/ossec/ruleset/sca.disabled
 
 COPY entrypoint.sh /entrypoint.sh 
 COPY wazuh-exec-container.py /app/wazuh-exec-container.py

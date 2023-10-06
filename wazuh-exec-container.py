@@ -19,12 +19,7 @@ def main():
         print("no arguments provided", file=sys.stderr)
         exit(1)
 
-    p = subprocess.Popen(
-        args,
-        stdin=subprocess.PIPE,
-        stdout=sys.stdout,
-        stderr=sys.stderr,
-    )
+    p = subprocess.Popen(args, stdin=subprocess.PIPE)
     if not p.stdin:
         print("unexpected inexistence of stdin handler", file=sys.stderr)
         exit(1)
