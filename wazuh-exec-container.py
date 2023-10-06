@@ -26,7 +26,7 @@ def main():
         stderr=sys.stderr,
     )
     if not p.stdin:
-        print("unexpected inexistence of stdin handler")
+        print("unexpected inexistence of stdin handler", file=sys.stderr)
         exit(1)
 
     while first_line:
