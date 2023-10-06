@@ -10,20 +10,23 @@ def main():
 
     try:
         active_response = json.loads(first_line)
+        args = active_response.get("parameters", {}).get("extra_args", [])
     except:
         active_response = None
+        args = ["bash"]
 
-    args = ["bash"]
-    if active_response:
-        args = active_response.get("parameters", {}).get("extra_args", [])
-        if len(args) == 0:
-            print("no arguments provided", file=sys.stderr)
-            exit(1)
+    if len(args) == 0:
+        print("no arguments provided", file=sys.stderr)
+        exit(1)
 
     p = subprocess.Popen(
-        args, stdin=subprocess.PIPE, stdout=sys.stdout, stderr=sys.stderr
+        args,
+        stdin=subprocess.PIPE,
+        stdout=sys.stdout,
+        stderr=sys.stderr,
     )
     if not p.stdin:
+        print("unexpected inexistence of stdin handler")
         exit(1)
 
     while first_line:
