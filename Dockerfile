@@ -37,6 +37,9 @@ RUN cd /root && wget https://github.com/VirusTotal/yara/archive/refs/tags/v4.3.2
   && make \
   && make install
 
+RUN install_packages git
+RUN git clone https://github.com/Yara-Rules/rules && mv rules /usr/local/yara
+
 
 
 FROM bitnami/minideb:bullseye AS wazuh-agent
@@ -72,6 +75,8 @@ COPY --from=socat /socat /var/ossec/bin/socat
 
 COPY entrypoint.sh /entrypoint.sh 
 COPY wazuh-exec-container.py /app/wazuh-exec-container.py
+COPY active-response /app/active-response
+
 COPY wazuh-control.sh /var/ossec/bin/wazuh-start.sh
 COPY wazuh-tail-logs.sh /var/ossec/bin/wazuh-tail-logs.sh
 COPY wazuh-exec-container.sh /var/ossec/active-response/bin/wazuh-exec-container.sh

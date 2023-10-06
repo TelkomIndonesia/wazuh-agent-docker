@@ -31,6 +31,6 @@ if [ "$desiredname" != "$currentname" ]; then
 fi
 
 exec multirun \
-    "/var/ossec/bin/socat UNIX-LISTEN:$WAZUH_AGENT_HOST_DIR/var/ossec/container-exec.sock,fork EXEC:"/app/wazuh-exec-container.py",pipes,stderr 2>/dev/null" \
+    "/var/ossec/bin/socat UNIX-LISTEN:$WAZUH_AGENT_HOST_DIR/var/ossec/container-exec.sock,fork EXEC:"/app/wazuh-exec-container.py",stderr" \
     "chroot $WAZUH_AGENT_HOST_DIR /var/ossec/bin/wazuh-start.sh" \
     "chroot $WAZUH_AGENT_HOST_DIR /var/ossec/bin/wazuh-tail-logs.sh"

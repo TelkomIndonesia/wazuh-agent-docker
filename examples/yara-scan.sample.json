@@ -1,0 +1,12 @@
+{
+    "parameters": {
+        "alert": {
+            "syscheck": {
+                "path": "/tmp/mirai"
+            }
+        },
+        "extra_args": [
+            "/app/active-response/yara-scan.py"
+        ]
+    }
+}
