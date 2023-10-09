@@ -3,7 +3,6 @@ ARG VERSION="4.4.1"
 
 
 FROM hairyhenderson/gomplate:v3.11.5-slim AS gomplate
-FROM paullj1/socat_static:1.7.3.3 AS socat
 
 
 
@@ -27,8 +26,9 @@ RUN cd fsnotify/cmd/fsnotify \
 
 
 
-FROM bitnami/minideb:bullseye AS yara
-RUN install_packages ca-certificates wget automake libtool make gcc pkg-config libjansson-dev libmagic-dev libssl-dev
+FROM debian:bullseye AS yara
+RUN apt-get update -y && apt-get install -y \
+  ca-certificates wget automake libtool make gcc pkg-config libjansson-dev libmagic-dev libssl-dev git
 RUN cd /root && wget https://github.com/VirusTotal/yara/archive/refs/tags/v4.3.2.tar.gz \
   && tar -zxf v4.3.2.tar.gz \
   && cd yara-4.3.2 \
@@ -36,23 +36,21 @@ RUN cd /root && wget https://github.com/VirusTotal/yara/archive/refs/tags/v4.3.2
   && ./configure --prefix=/usr/local/yara --disable-dotnet --with-crypto --enable-magic --enable-cuckoo --disable-shared --enable-static\
   && make \
   && make install
-
-RUN install_packages git
 RUN git clone https://github.com/Yara-Rules/rules && mv rules /usr/local/yara
 
 
 
-FROM bitnami/minideb:bullseye AS wazuh-agent
+FROM debian:bullseye AS wazuh-agent
 ARG VERSION
 ARG VERSION_REVISION="1"
-RUN install_packages \  
+RUN apt-get update -y && apt-get install -y \
   curl \
   apt-transport-https \
   gnupg2 \
   ca-certificates
 RUN curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | apt-key add - \
   && echo "deb https://packages.wazuh.com/4.x/apt/ stable main" | tee /etc/apt/sources.list.d/wazuh.list \
-  && install_packages wazuh-agent=${VERSION}-${VERSION_REVISION}
+  && apt-get update -y && apt-get install -y wazuh-agent=${VERSION}-${VERSION_REVISION}
 
 
 
