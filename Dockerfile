@@ -56,12 +56,12 @@ RUN curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | apt-key add - \
 
 
 
-FROM golang AS wazuh-exec-container
+FROM golang AS wazuh-container-exec
 WORKDIR /src
-COPY wazuh-exec-container.go .
+COPY wazuh-container-exec.go .
 RUN --mount=type=cache,target=/go/pkg/mod \
   --mount=type=cache,target=/root/.cache/go-build \
-  CGO_ENABLED=0 go build wazuh-exec-container.go
+  CGO_ENABLED=0 go build wazuh-container-exec.go
 
 
 FROM bitnami/python:3.11.6-debian-11-r0
@@ -79,10 +79,9 @@ COPY --from=yara /usr/local/yara /usr/local/yara
 COPY --from=wazuh-agent /var/ossec /var/ossec
 COPY --from=wazuh-manager /var/ossec/ruleset/sca.disabled /var/ossec/ruleset/sca.disabled
 COPY --from=fsnotify /src/fsnotify/cmd/fsnotify/fsnotify /var/ossec/bin/fsnotify
-COPY --from=wazuh-exec-container /src/wazuh-exec-container /var/ossec/active-response/bin/wazuh-exec-container
+COPY --from=wazuh-container-exec /src/wazuh-container-exec /var/ossec/active-response/bin/wazuh-container-exec
 
 COPY entrypoint.sh /entrypoint.sh 
-COPY wazuh-exec-container.py /app/wazuh-exec-container.py
 COPY active-response /app/active-response
 
 COPY wazuh-control.sh /var/ossec/bin/wazuh-start.sh

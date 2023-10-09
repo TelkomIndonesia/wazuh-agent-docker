@@ -8,49 +8,64 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path"
 	"sync"
 )
 
+var listenPath = getEnvOrDef("WAZUH_AGENT_CONTAINER_EXEC_LISTEN_PATH", path.Join(os.Getenv("WAZUH_AGENT_HOST_DIR"), "/var/ossec/container-exec.sock"))
+var connectPath = getEnvOrDef("WAZUH_AGENT_CONTAINER_EXEC_CONNECT_PATH", "/var/ossec/container-exec.sock")
+var logFile = getEnvOrDef("WAZUH_AGENT_CONTAINER_EXEC_LOG_FILE", "/var/ossec/logs/active-responses.log")
+
+func getEnvOrDef(name, def string) string {
+	v, ok := os.LookupEnv(name)
+	if !ok {
+		return def
+	}
+	return v
+}
+
 func client() {
-	conn, err := net.Dial("unix", "/var/ossec/container-exec.sock")
+	conn, err := net.Dial("unix", connectPath)
 	if err != nil {
 		panic(err)
 	}
 	defer conn.Close()
 
-	arlog, err := os.OpenFile("/var/ossec/logs/active-responses.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		panic(err)
+	stdout := os.Stdout
+	if logFile != "" {
+		stdout, err = os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			panic(err)
+		}
+		defer stdout.Close()
 	}
-	defer arlog.Close()
 
 	var wg sync.WaitGroup
 	wg.Add(2)
 	defer wg.Wait()
-
 	go func() {
 		defer wg.Done()
 		if _, err := io.Copy(conn, os.Stdin); err != nil {
 			panic(err)
 		}
-		conn.Write([]byte{'\n'})
+		conn.Write([]byte{0, '\n'})
 	}()
 	go func() {
 		defer wg.Done()
-		if _, err := io.Copy(arlog, conn); err != nil {
+		if _, err := io.Copy(stdout, conn); err != nil {
 			panic(err)
 		}
 	}()
 }
 
-type ararg struct {
+type activeResponseArgs struct {
 	Parameters struct {
 		ExtraArgs []string `json:"extra_args"`
 	} `json:"parameters"`
 }
 
 func server() {
-	listener, err := net.Listen("unix", "/host/var/ossec/container-exec.sock")
+	listener, err := net.Listen("unix", listenPath)
 	if err != nil {
 		panic(err)
 	}
@@ -74,7 +89,7 @@ func server() {
 			}
 
 			var args []string
-			ar := &ararg{}
+			ar := &activeResponseArgs{}
 			if err := json.Unmarshal(line, ar); err == nil {
 				args = ar.Parameters.ExtraArgs
 			} else {
@@ -109,8 +124,7 @@ func server() {
 			go func() {
 				defer wg.Done()
 				defer stdin.Close()
-
-				for len(line) > 1 {
+				for len(line) > 1 && !(len(line) == 2 || line[0] == 0) {
 					_, err := io.WriteString(stdin, string(line))
 					if err != nil {
 						conn.Write([]byte(err.Error()))
@@ -126,7 +140,6 @@ func server() {
 			go func() {
 				defer wg.Done()
 				defer stdout.Close()
-
 				if _, err := io.Copy(conn, stdout); err != nil {
 					fmt.Println("error reading stdout", err)
 				}
@@ -134,7 +147,6 @@ func server() {
 			go func() {
 				defer wg.Done()
 				defer stderr.Close()
-
 				if _, err := io.Copy(conn, stderr); err != nil {
 					fmt.Println("error reading stderr", err)
 				}
@@ -149,7 +161,7 @@ func server() {
 }
 
 func main() {
-	if len(os.Args) > 1 {
+	if len(os.Args) > 1 && os.Args[1] == "server" {
 		server()
 		return
 	}
