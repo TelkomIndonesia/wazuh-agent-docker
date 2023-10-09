@@ -64,13 +64,14 @@ RUN --mount=type=cache,target=/go/pkg/mod \
   CGO_ENABLED=0 go build wazuh-container-exec.go
 
 
-FROM bitnami/python:3.11.6-debian-11-r0
+FROM python:3.11-slim-bullseye
 
-RUN install_packages \  
+RUN apt-get update -y && apt-get install -y \  
   rsync \
   libjansson4 \
   libmagic1 \
-  libssl1.1
+  libssl1.1 \
+  && rm -rf /var/cache/apt/lists
 
 COPY --from=gomplate /gomplate /usr/bin/gomplate
 COPY --from=multirun /src/multirun /usr/bin/multirun
