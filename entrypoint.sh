@@ -21,11 +21,13 @@ done
 # prepare config and copy to host
 WAZUH_AGENT_HOST_DIR=${WAZUH_AGENT_HOST_DIR:-"/host"}
 gomplate -f /var/ossec/etc/ossec.tpl.conf -o /var/ossec/etc/ossec.conf
-rsync -avq --delete --exclude etc/client.keys /var/ossec/ "$WAZUH_AGENT_HOST_DIR/var/ossec"
+rsync /var/ossec/ "$WAZUH_AGENT_HOST_DIR/var/ossec" \
+    -avq --delete \
+    --exclude "etc/client.keys"
 
 # rename agent if changed
 desiredname="${WAZUH_AGENT_NAME_PREFIX:-""}${WAZUH_AGENT_NAME:-""}${WAZUH_AGENT_NAME_POSTFIX:-""}"
-currentname=$(cat "$WAZUH_AGENT_HOST_DIR/var/ossec/etc/client.keys" || echo | awk '{print $2}')
+currentname=$(cat "$WAZUH_AGENT_HOST_DIR/var/ossec/etc/client.keys" | awk '{print $2}' || echo)
 if [ "$desiredname" != "$currentname" ]; then
     echo -n "" >"$WAZUH_AGENT_HOST_DIR/var/ossec/etc/client.keys"
 fi

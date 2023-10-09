@@ -83,7 +83,7 @@ COPY --from=wazuh-container-exec /src/wazuh-container-exec /var/ossec/active-res
 COPY entrypoint.sh /entrypoint.sh 
 COPY active-response /app/active-response
 
-COPY wazuh-control.sh /var/ossec/bin/wazuh-start.sh
+COPY wazuh-start.sh /var/ossec/bin/wazuh-start.sh
 COPY wazuh-tail-logs.sh /var/ossec/bin/wazuh-tail-logs.sh
 COPY ossec.tpl.conf /var/ossec/etc/ossec.tpl.conf
 

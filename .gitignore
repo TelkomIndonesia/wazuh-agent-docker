@@ -2,3 +2,4 @@
 .env
 examples/authd.pass
 go.mod
+docker-compose.override.yml

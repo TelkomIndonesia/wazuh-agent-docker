@@ -24,7 +24,7 @@ services:
     network_mode: host
     userns_mode: host
     environment:
-      WAZUH_RULESET_SCA: cis_ubuntu18-04
+      WAZUH_RULESET_SCA: cis_ubuntu22-04
     volumes:
       - /:/host:ro
       - /var/ossec:/host/var/ossec
