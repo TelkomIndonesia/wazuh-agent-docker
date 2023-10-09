@@ -26,19 +26,20 @@ def main():
         text=True,
     )
     if p.stdout == None:
-        print("unexpected inexistence of stdout", sys.stderr)
+        print("ERROR: unexpected inexistence of stdout", sys.stderr)
         exit(1)
 
+    msg = {"type": "yara-scan" ,"results": []}
     for line in p.stdout.readlines():
         code = p.poll()
         if code != None and code > 0:
             exit(code)
 
         line = line.rstrip().replace(realpath, filepath)
-        print(
-            "wazuh-yara: INFO - Scan result: {}".format(line),
-            file=sys.stderr,
-        )
+        msg["results"].append(line)
+    
+    if len(msg.get("results",[])) > 0:
+        print(json.dumps(msg),file=sys.stderr)
     exit(p.wait())
 
 
