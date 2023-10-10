@@ -6,7 +6,7 @@
             }
         },
         "extra_args": [
-            "/app/active-response/yara-scan.py"
+            "yara-scan.py"
         ]
     }
 }

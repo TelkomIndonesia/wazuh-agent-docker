@@ -33,6 +33,6 @@ if [ "$desiredname" != "$currentname" ]; then
 fi
 
 exec multirun \
-    "/var/ossec/active-response/bin/wazuh-container-exec server" \
+    "env PATH='/var/ossec/active-response/bin:$PATH' wazuh-container-exec server" \
     "chroot $WAZUH_AGENT_HOST_DIR /var/ossec/bin/wazuh-start.sh" \
     "chroot $WAZUH_AGENT_HOST_DIR /var/ossec/bin/wazuh-tail-logs.sh"

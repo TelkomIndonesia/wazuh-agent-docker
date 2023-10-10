@@ -79,10 +79,9 @@ COPY --from=wazuh-agent /var/ossec /var/ossec
 COPY --from=wazuh-manager /var/ossec/ruleset/sca.disabled /var/ossec/ruleset/sca.disabled
 COPY --from=fsnotify /src/fsnotify/cmd/fsnotify/fsnotify /var/ossec/bin/fsnotify
 COPY --from=wazuh-container-exec /src/wazuh-container-exec /var/ossec/active-response/bin/wazuh-container-exec
+COPY active-response/* /var/ossec/active-response/bin
 
 COPY entrypoint.sh /entrypoint.sh 
-COPY active-response /app/active-response
-
 COPY wazuh-start.sh /var/ossec/bin/wazuh-start.sh
 COPY wazuh-tail-logs.sh /var/ossec/bin/wazuh-tail-logs.sh
 COPY ossec.tpl.conf /var/ossec/etc/ossec.tpl.conf

@@ -9,7 +9,10 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
+	"strconv"
 	"sync"
+	"time"
 )
 
 var listenPath = getEnvOrDef("WAZUH_AGENT_CONTAINER_EXEC_LISTEN_PATH", path.Join(os.Getenv("WAZUH_AGENT_HOST_DIR"), "/var/ossec/container-exec.sock"))
@@ -58,7 +61,33 @@ func client() {
 	}()
 }
 
-type activeResponseArgs struct {
+type syslogWrapper struct {
+	hostname string
+	cmd      *exec.Cmd
+	w        io.Writer
+}
+
+func newSyslogWrapper(cmd *exec.Cmd, w io.Writer) io.Writer {
+	h, err := os.Hostname()
+	if err != nil {
+		h = "unknown"
+	}
+	return syslogWrapper{
+		hostname: h,
+		cmd:      cmd,
+		w:        w,
+	}
+}
+
+func (l syslogWrapper) Write(p []byte) (n int, err error) {
+	h := time.Now().Format(time.Stamp) + " " +
+		l.hostname + " " +
+		filepath.Base(l.cmd.Path) + "[" + strconv.Itoa(l.cmd.Process.Pid) + "]" +
+		": "
+	return l.w.Write(append([]byte(h), p...))
+}
+
+type activeResponseData struct {
 	Parameters struct {
 		ExtraArgs []string `json:"extra_args"`
 	} `json:"parameters"`
@@ -89,19 +118,24 @@ func server() {
 			}
 
 			var args []string
-			ar := &activeResponseArgs{}
-			if err := json.Unmarshal(line, ar); err == nil {
-				args = ar.Parameters.ExtraArgs
+			ard := &activeResponseData{}
+			if err := json.Unmarshal(line, ard); err == nil {
+				args = ard.Parameters.ExtraArgs
+				if len(args) == 0 {
+					conn.Write([]byte("no arguments specified"))
+					return
+				}
+
 			} else {
+				ard = nil
 				args = []string{"bash"}
 			}
 
-			if len(args) == 0 {
-				conn.Write([]byte("no arguments specified"))
-				return
-			}
-
 			cmd := exec.Command(args[0], args[1:]...)
+			var writter io.Writer = conn
+			if ard != nil {
+				writter = newSyslogWrapper(cmd, conn)
+			}
 			stdin, err := cmd.StdinPipe()
 			if err != nil {
 				conn.Write([]byte(err.Error()))
@@ -124,7 +158,7 @@ func server() {
 			go func() {
 				defer wg.Done()
 				defer stdin.Close()
-				for len(line) > 1 && !(len(line) == 2 || line[0] == 0) {
+				for len(line) > 1 && !(len(line) == 2 && line[0] == 0) {
 					_, err := io.WriteString(stdin, string(line))
 					if err != nil {
 						conn.Write([]byte(err.Error()))
@@ -140,14 +174,14 @@ func server() {
 			go func() {
 				defer wg.Done()
 				defer stdout.Close()
-				if _, err := io.Copy(conn, stdout); err != nil {
+				if _, err := io.Copy(writter, stdout); err != nil {
 					fmt.Println("error reading stdout", err)
 				}
 			}()
 			go func() {
 				defer wg.Done()
 				defer stderr.Close()
-				if _, err := io.Copy(conn, stderr); err != nil {
+				if _, err := io.Copy(writter, stderr); err != nil {
 					fmt.Println("error reading stderr", err)
 				}
 			}()
