@@ -64,6 +64,7 @@ func client() {
 type syslogWrapper struct {
 	hostname string
 	cmd      *exec.Cmd
+	name     string
 	w        io.Writer
 }
 
@@ -75,6 +76,7 @@ func newSyslogWrapper(cmd *exec.Cmd, w io.Writer) io.Writer {
 	return syslogWrapper{
 		hostname: h,
 		cmd:      cmd,
+		name:     filepath.Base(cmd.Path),
 		w:        w,
 	}
 }
@@ -82,7 +84,7 @@ func newSyslogWrapper(cmd *exec.Cmd, w io.Writer) io.Writer {
 func (l syslogWrapper) Write(p []byte) (n int, err error) {
 	h := time.Now().Format(time.Stamp) + " " +
 		l.hostname + " " +
-		filepath.Base(l.cmd.Path) + "[" + strconv.Itoa(l.cmd.Process.Pid) + "]" +
+		l.name + "[" + strconv.Itoa(l.cmd.Process.Pid) + "]" +
 		": "
 	return l.w.Write(append([]byte(h), p...))
 }
