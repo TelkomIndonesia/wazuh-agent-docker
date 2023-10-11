@@ -14,6 +14,7 @@ def main():
     input_str = ""
     for line in sys.stdin:
         input_str += line
+        break
 
     data = json.loads(input_str)
     filepath = data["parameters"]["alert"]["syscheck"]["path"]
@@ -29,7 +30,7 @@ def main():
         print("ERROR: unexpected inexistence of stdout", sys.stderr)
         exit(1)
 
-    msg = {"type": "yara-scan" ,"results": []}
+    msg = {"type": "yara-scan", "results": []}
     for line in p.stdout.readlines():
         code = p.poll()
         if code != None and code > 0:
@@ -37,9 +38,9 @@ def main():
 
         line = line.rstrip().replace(realpath, filepath)
         msg["results"].append(line)
-    
-    if len(msg.get("results",[])) > 0:
-        print(json.dumps(msg),file=sys.stderr)
+
+    if len(msg.get("results", [])) > 0:
+        print(json.dumps(msg), file=sys.stderr)
     exit(p.wait())
 
 

@@ -3,8 +3,10 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -14,6 +16,8 @@ import (
 	"sync"
 	"time"
 )
+
+const EOF = 0
 
 var listenPath = getEnvOrDef("WAZUH_AGENT_CONTAINER_EXEC_LISTEN_PATH", path.Join(os.Getenv("WAZUH_AGENT_HOST_DIR"), "/var/ossec/container-exec.sock"))
 var connectPath = getEnvOrDef("WAZUH_AGENT_CONTAINER_EXEC_CONNECT_PATH", "/var/ossec/container-exec.sock")
@@ -43,22 +47,21 @@ func client() {
 		defer stdout.Close()
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(2)
-	defer wg.Wait()
 	go func() {
-		defer wg.Done()
 		if _, err := io.Copy(conn, os.Stdin); err != nil {
-			panic(err)
+			fmt.Fprintln(stdout, "Error copying to stdin: ", err)
+			return
 		}
-		conn.Write([]byte{0, '\n'})
-	}()
-	go func() {
-		defer wg.Done()
-		if _, err := io.Copy(stdout, conn); err != nil {
-			panic(err)
+		if _, err := conn.Write([]byte{EOF, '\n'}); err != nil {
+			fmt.Fprintln(stdout, "Error sending EOF: ", err)
+			return
 		}
 	}()
+
+	if _, err := io.Copy(stdout, conn); err != nil {
+		fmt.Fprintln(stdout, "Error copying to stdout: ", err)
+		os.Exit(1)
+	}
 }
 
 type syslogWrapper struct {
@@ -86,7 +89,11 @@ func (l syslogWrapper) Write(p []byte) (n int, err error) {
 		l.hostname + " " +
 		l.name + "[" + strconv.Itoa(l.cmd.Process.Pid) + "]" +
 		": "
-	return l.w.Write(append([]byte(h), p...))
+	n, err = l.w.Write(append([]byte(h), p...))
+	if n = n - len(h); n < 0 {
+		n = 0
+	}
+	return
 }
 
 type activeResponseData struct {
@@ -105,12 +112,13 @@ func server() {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			fmt.Printf("Error accepting connection: %v\n", err)
+			log.Println("Error accepting connection:", err)
 			continue
 		}
 
 		go func(conn net.Conn) {
 			defer conn.Close()
+			done := false
 
 			r := bufio.NewReader(conn)
 			line, err := r.ReadBytes('\n')
@@ -124,7 +132,7 @@ func server() {
 			if err := json.Unmarshal(line, ard); err == nil {
 				args = ard.Parameters.ExtraArgs
 				if len(args) == 0 {
-					conn.Write([]byte("no arguments specified"))
+					conn.Write([]byte("No arguments specified"))
 					return
 				}
 
@@ -141,16 +149,19 @@ func server() {
 			stdin, err := cmd.StdinPipe()
 			if err != nil {
 				conn.Write([]byte(err.Error()))
+				log.Println("Error getting stdin pipe:", err)
 				return
 			}
 			stdout, err := cmd.StdoutPipe()
 			if err != nil {
 				conn.Write([]byte(err.Error()))
+				log.Println("Error getting stdout pipe:", err)
 				return
 			}
 			stderr, err := cmd.StderrPipe()
 			if err != nil {
 				conn.Write([]byte(err.Error()))
+				log.Println("Error getting stderr pipe:", err)
 				return
 			}
 
@@ -160,38 +171,44 @@ func server() {
 			go func() {
 				defer wg.Done()
 				defer stdin.Close()
-				for len(line) > 1 && !(len(line) == 2 && line[0] == 0) {
+				for len(line) > 1 && !(len(line) == 2 && line[0] == EOF) {
 					_, err := io.WriteString(stdin, string(line))
 					if err != nil {
 						conn.Write([]byte(err.Error()))
+						log.Println("Error writing to stdin:", err)
 						return
 					}
+
 					line, err = r.ReadBytes('\n')
+					if err != nil && !errors.Is(err, io.EOF) && !done {
+						log.Println("Error reading from connection:", err)
+					}
 					if err != nil {
-						conn.Write([]byte(err.Error()))
-						return
+						cmd.Process.Kill()
 					}
 				}
 			}()
 			go func() {
 				defer wg.Done()
 				defer stdout.Close()
-				if _, err := io.Copy(writter, stdout); err != nil {
-					fmt.Println("error reading stdout", err)
+				if _, err := io.Copy(writter, stdout); err != nil && !done {
+					log.Println("Error copying stdout:", err)
 				}
 			}()
 			go func() {
 				defer wg.Done()
 				defer stderr.Close()
-				if _, err := io.Copy(writter, stderr); err != nil {
-					fmt.Println("error reading stderr", err)
+				if _, err := io.Copy(writter, stderr); err != nil && !done {
+					log.Println("Error copying stderr:", err)
 				}
 			}()
 
+			defer conn.Close()
 			if err := cmd.Run(); err != nil {
-				fmt.Println("command error", err)
 				conn.Write([]byte(err.Error()))
+				log.Println("Error executing command:", err)
 			}
+			done = true
 		}(conn)
 	}
 }

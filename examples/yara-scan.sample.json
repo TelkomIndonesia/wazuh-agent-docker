@@ -1,12 +1,1 @@
-{
-    "parameters": {
-        "alert": {
-            "syscheck": {
-                "path": "/tmp/mirai"
-            }
-        },
-        "extra_args": [
-            "yara-scan.py"
-        ]
-    }
-}
+{"version":1,"origin":{"name":"wazuh-manager-worker-1","module":"wazuh-execd"},"command":"add","parameters":{"extra_args":["yara-scan.py"],"alert":{"timestamp":"2023-10-11T02:19:45.202+0000","rule":{"level":5,"description":"File added to the system.","id":"554","firedtimes":2,"mail":false,"groups":["ossec","syscheck","syscheck_entry_added","syscheck_file"],"pci_dss":["11.5"],"gpg13":["4.11"],"gdpr":["II_5.1.f"],"hipaa":["164.312.c.1","164.312.c.2"],"nist_800_53":["SI.7"],"tsc":["PI1.4","PI1.5","CC6.1","CC6.8","CC7.2","CC7.3"]},"agent":{"id":"1","name":"agent","ip":"1.1.1.1"},"manager":{"name":"wazuh-manager-worker-1"},"id":"1696990785.99115592","cluster":{"name":"wazuh","node":"wazuh-manager-worker-1"},"full_log":"File '/root/mirai' added\nMode: realtime\n","syscheck":{"path":"/root/mirai","mode":"realtime","size_after":"80176","perm_after":"rw-r--r--","uid_after":"0","gid_after":"0","md5_after":"998b2c120362ba1138073ac4868f5e44","sha1_after":"44e86968b1791a58ec4d619961b543136658d07b","sha256_after":"ef40bd57689c055bc937669d3f6a83041ef7ba61c4aa00b962bd44cb743e66ff","uname_after":"root","gname_after":"root","mtime_after":"2023-10-06T04:55:42","inode_after":278464,"event":"added"},"decoder":{"name":"syscheck_new_entry"},"location":"syscheck"},"program":"active-response/bin/wazuh-container-exec"}}
