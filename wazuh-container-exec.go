@@ -123,7 +123,7 @@ func server() {
 			r := bufio.NewReader(conn)
 			line, err := r.ReadBytes('\n')
 			if err != nil {
-				conn.Write([]byte(err.Error()))
+				log.Println("Error reading from connection:", err)
 				return
 			}
 
