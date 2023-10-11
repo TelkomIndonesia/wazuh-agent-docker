@@ -30,7 +30,7 @@ def main():
         print("ERROR: unexpected inexistence of stdout", sys.stderr)
         exit(1)
 
-    msg = {"type": "yara-scan", "results": []}
+    msg = {"type": "yara-scan", "path": filepath, "results": []}
     for line in p.stdout.readlines():
         code = p.poll()
         if code != None and code > 0:
