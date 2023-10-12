@@ -20,10 +20,20 @@ RUN wget -c https://github.com/nicolas-van/multirun/releases/download/1.1.3/mult
 
 FROM golang:1.20.4-bullseye AS fsnotify
 WORKDIR /src
-RUN git clone https://github.com/fsnotify/fsnotify
-RUN cd fsnotify/cmd/fsnotify \
+RUN git clone https://github.com/fsnotify/fsnotify .
+RUN --mount=type=cache,target=/go/pkg/mod \
+  --mount=type=cache,target=/root/.cache/go-build \
+  cd cmd/fsnotify \
   && GOOS=linux go build -tags release -a -ldflags "-extldflags -static" -o fsnotify
 
+
+
+FROM golang:1.20.4-bullseye AS job
+WORKDIR /src
+RUN git clone --depth 1 --branch v0.2.0 https://github.com/liujianping/job .
+RUN --mount=type=cache,target=/go/pkg/mod \
+  --mount=type=cache,target=/root/.cache/go-build \
+  GOOS=linux go build -o job-
 
 
 FROM debian:bullseye AS yara
@@ -69,19 +79,23 @@ RUN apt-get update -y && apt-get install -y \
   libjansson4 \
   libmagic1 \
   libssl1.1 \
+  curl \
+  unzip \
   && rm -rf /var/cache/apt/lists
 
 COPY --from=gomplate /gomplate /usr/bin/gomplate
 COPY --from=multirun /src/multirun /usr/bin/multirun
+COPY --from=job /src/job- /usr/bin/job
 COPY --from=yara /usr/local/yara /usr/local/yara
 
 COPY --from=wazuh-agent /var/ossec /var/ossec
 COPY --from=wazuh-manager /var/ossec/ruleset/sca.disabled /var/ossec/ruleset/sca.disabled
-COPY --from=fsnotify /src/fsnotify/cmd/fsnotify/fsnotify /var/ossec/bin/fsnotify
+COPY --from=fsnotify /src/cmd/fsnotify/fsnotify /var/ossec/bin/fsnotify
 COPY --from=wazuh-container-exec /src/wazuh-container-exec /var/ossec/active-response/bin/wazuh-container-exec
 COPY active-response/* /var/ossec/active-response/bin
 
 COPY entrypoint.sh /entrypoint.sh 
+COPY yara-rule-downloader.sh /yara-rule-downloader.sh
 COPY wazuh-start.sh /var/ossec/bin/wazuh-start.sh
 COPY wazuh-tail-logs.sh /var/ossec/bin/wazuh-tail-logs.sh
 COPY ossec.tpl.conf /var/ossec/etc/ossec.tpl.conf

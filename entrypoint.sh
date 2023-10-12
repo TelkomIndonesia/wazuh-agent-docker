@@ -32,7 +32,10 @@ if [ "$desiredname" != "$currentname" ]; then
     echo -n "" >"$WAZUH_AGENT_HOST_DIR/var/ossec/etc/client.keys"
 fi
 
+/yara-rule-downloader.sh
+
 exec multirun \
     "env PATH='/var/ossec/active-response/bin:$PATH' wazuh-container-exec server" \
+    "job -s '0 1 * * *' -- /yara-rule-downloader.sh" \
     "chroot $WAZUH_AGENT_HOST_DIR /var/ossec/bin/wazuh-start.sh" \
     "chroot $WAZUH_AGENT_HOST_DIR /var/ossec/bin/wazuh-tail-logs.sh"
